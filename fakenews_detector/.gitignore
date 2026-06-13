@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.env
+modelo/modelo_treinado.pkl
+modelo/modelo_meta.json

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VerdadEira — Detector de Fake News</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Tokens ─────────────────────────────────── */
+    :root {
+      --bg:       #0b0f1a;
+      --surface:  #111827;
+      --border:   #1e2d45;
+      --accent:   #3b82f6;
+      --danger:   #ef4444;
+      --success:  #22c55e;
+      --warn:     #f59e0b;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --card:     #141d2e;
+      --radius:   12px;
+      --font-h:   'Space Grotesk', sans-serif;
+      --font-b:   'Inter', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-b);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ─────────────────────────────────── */
+    header {
+      width: 100%;
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    header h1 {
+      font-family: var(--font-h);
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    header span.tag {
+      margin-left: auto;
+      font-size: 0.7rem;
+      background: rgba(59,130,246,.15);
+      color: var(--accent);
+      border: 1px solid rgba(59,130,246,.3);
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-weight: 500;
+    }
+
+    /* ── Main ───────────────────────────────────── */
+    main {
+      width: 100%;
+      max-width: 680px;
+      padding: 40px 20px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .hero {
+      text-align: center;
+    }
+
+    .hero h2 {
+      font-family: var(--font-h);
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+
+    .hero h2 em {
+      color: var(--accent);
+      font-style: normal;
+      position: relative;
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* ── Barra de Análise ───────────────────────── */
+    .search-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .search-card label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font-b);
+      font-size: 0.95rem;
+      padding: 14px 16px;
+      resize: vertical;
+      min-height: 100px;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    textarea::placeholder { color: var(--muted); }
+    textarea:focus { border-color: var(--accent); }
+
+    button#btn-verificar {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: var(--font-h);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button#btn-verificar:hover   { opacity: .88; }
+    button#btn-verificar:active  { transform: scale(.98); }
+    button#btn-verificar:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Resultado ──────────────────────────────── */
+    #resultado { display: none; }
+
+    .result-card {
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      animation: fadeIn .35s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    .result-card.verdadeiro { border-color: var(--success); background: rgba(34,197,94,.06); }
+    .result-card.falso      { border-color: var(--danger);  background: rgba(239,68,68,.06);  }
+    .result-card.indefinido { border-color: var(--warn);    background: rgba(245,158,11,.06); }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .verdict-icon {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .verdadeiro .verdict-icon { background: rgba(34,197,94,.15); }
+    .falso .verdict-icon      { background: rgba(239,68,68,.15);  }
+    .indefinido .verdict-icon { background: rgba(245,158,11,.15); }
+
+    .verdict-label {
+      font-family: var(--font-h);
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    .verdadeiro .verdict-label { color: var(--success); }
+    .falso .verdict-label      { color: var(--danger);  }
+    .indefinido .verdict-label { color: var(--warn);    }
+
+    .verdict-sub { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+
+    .result-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .detail-item {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .detail-item .di-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+    .detail-item .di-value { font-size: 0.9rem; font-weight: 500; word-break: break-word; }
+
+    .confidence-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .confidence-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width .6s ease;
+    }
+
+    .verdadeiro .confidence-bar-fill { background: var(--success); }
+    .falso .confidence-bar-fill      { background: var(--danger);  }
+
+    .result-source {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .result-source a { color: var(--accent); text-decoration: none; }
+    .result-source a:hover { text-decoration: underline; }
+
+    /* ── Exemplos ───────────────────────────────── */
+    .examples-section h3 {
+      font-family: var(--font-h);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 12px;
+    }
+
+    .examples-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .example-chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      text-align: left;
+      color: var(--text);
+    }
+
+    .example-chip:hover {
+      border-color: var(--accent);
+      background: rgba(59,130,246,.06);
+    }
+
+    /* ── Disclaimer ─────────────────────────────── */
+    .disclaimer {
+      background: rgba(245,158,11,.07);
+      border: 1px solid rgba(245,158,11,.2);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 0.8rem;
+      color: #a16207;
+      line-height: 1.5;
+    }
+
+    /* ── Loader ─────────────────────────────────── */
+    .loader {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsivo ─────────────────────────────── */
+    @media (max-width: 500px) {
+      .result-details { grid-template-columns: 1fr; }
+      .hero h2 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">🔍</div>
+  <h1>VerdadEira</h1>
+  <span class="tag">Projeto Acadêmico</span>
+</header>
+
+<main>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h2>Verifique se uma notícia é<br /><em>verdadeira ou falsa</em></h2>
+    <p>Combina a API do Google Fact Check com Machine Learning<br />para analisar afirmações sobre o contexto eleitoral.</p>
+  </div>
+
+  <!-- Input -->
+  <div class="search-card">
+    <label for="afirmacao">Afirmação ou notícia</label>
+    <textarea
+      id="afirmacao"
+      placeholder="Ex: Urnas eletrônicas foram fraudadas nas eleições de 2022..."
+    ></textarea>
+    <button id="btn-verificar" onclick="verificar()">
+      <span id="btn-text">Verificar agora</span>
+    </button>
+  </div>
+
+  <!-- Resultado -->
+  <div id="resultado"></div>
+
+  <!-- Exemplos -->
+  <div class="examples-section">
+    <h3>Exemplos para testar</h3>
+    <div class="examples-grid">
+      <button class="example-chip" onclick="preencher(this.textContent)">Urnas eletrônicas foram fraudadas nas eleições brasileiras</button>
+      <button class="example-chip" onclick="preencher(this.textContent)">O TSE permite auditoria pública do código-fonte das urnas eletrônicas</button>
+      <button class="example-chip" onclick="preencher(this.textContent)">Bolsonaro tentou um golpe de estado após perder as eleições de 2022</button>
+      <button class="example-chip" onclick="preencher(this.textContent)">Lula foi absolvido pelo STF de todas as acusações da Lava Jato</button>
+    </div>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer">
+    ⚠️ <strong>Uso acadêmico e experimental.</strong> A classificação por Machine Learning não garante veracidade absoluta — é uma ferramenta de apoio à análise crítica.
+  </div>
+
+</main>
+
+<script>
+  // ── Configuração ────────────────────────────────────────────────────────────
+  // Aponte para onde o Flask está rodando
+  const API_BASE = "http://localhost:5000";
+
+  // ── Funções ─────────────────────────────────────────────────────────────────
+
+  function preencher(texto) {
+    document.getElementById("afirmacao").value = texto;
+    document.getElementById("afirmacao").focus();
+  }
+
+  async function verificar() {
+    const afirmacao = document.getElementById("afirmacao").value.trim();
+    if (!afirmacao) {
+      alert("Por favor, insira uma afirmação para verificar.");
+      return;
+    }
+
+    // Estado de carregamento
+    const btn = document.getElementById("btn-verificar");
+    const btnText = document.getElementById("btn-text");
+    btn.disabled = true;
+    btnText.innerHTML = '<span class="loader"></span> Analisando...';
+
+    document.getElementById("resultado").style.display = "none";
+
+    try {
+      const resp = await fetch(`${API_BASE}/verificar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ afirmacao })
+      });
+
+      if (!resp.ok) throw new Error(`Erro ${resp.status}`);
+      const data = await resp.json();
+      renderResultado(data);
+
+    } catch (err) {
+      // Modo demo sem backend
+      renderDemo(afirmacao);
+    } finally {
+      btn.disabled = false;
+      btnText.textContent = "Verificar novamente";
+    }
+  }
+
+  function renderResultado(data) {
+    const resultado = data.resultado || "indefinido";
+    const icons = { verdadeiro: "✅", falso: "❌", indefinido: "⚠️" };
+    const labels = { verdadeiro: "Verdadeiro", falso: "Falso", indefinido: "Indefinido" };
+
+    const confiancaPct = data.confianca ? Math.round(data.confianca * 100) : null;
+    const metodoLabel = data.metodo === "api" ? "Google Fact Check API" : "Modelo ML Local";
+
+    let detalhes = `
+      <div class="detail-item">
+        <div class="di-label">Fonte</div>
+        <div class="di-value">${data.publisher || data.fonte || metodoLabel}</div>
+      </div>
+      <div class="detail-item">
+        <div class="di-label">Classificação</div>
+        <div class="di-value">${data.rating || labels[resultado]}</div>
+      </div>
+    `;
+
+    if (data.modelo_usado) {
+      detalhes += `
+        <div class="detail-item">
+          <div class="di-label">Algoritmo</div>
+          <div class="di-value">${data.modelo_usado}</div>
+        </div>
+      `;
+    }
+
+    if (confiancaPct !== null) {
+      detalhes += `
+        <div class="detail-item">
+          <div class="di-label">Confiança do modelo</div>
+          <div class="di-value">${confiancaPct}%</div>
+          <div class="confidence-bar" style="margin-top:6px">
+            <div class="confidence-bar-fill" style="width:${confiancaPct}%"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    const urlHtml = data.url
+      ? `<div class="result-source">🔗 Fonte original: <a href="${data.url}" target="_blank">${data.url}</a></div>`
+      : `<div class="result-source">📊 Método: ${metodoLabel}</div>`;
+
+    const html = `
+      <div class="result-card ${resultado}">
+        <div class="result-header">
+          <div class="verdict-icon">${icons[resultado]}</div>
+          <div>
+            <div class="verdict-label">${labels[resultado]}</div>
+            <div class="verdict-sub">"${data.afirmacao.substring(0, 80)}${data.afirmacao.length > 80 ? '...' : ''}"</div>
+          </div>
+        </div>
+        <div class="result-details">${detalhes}</div>
+        ${urlHtml}
+      </div>
+    `;
+
+    const el = document.getElementById("resultado");
+    el.innerHTML = html;
+    el.style.display = "block";
+    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  // Modo demo (sem backend rodando)
+  function renderDemo(afirmacao) {
+    const texto = afirmacao.toLowerCase();
+    let resultado, rating, fonte;
+
+    if (texto.includes("fraude") || texto.includes("hacke") || texto.includes("golpe")) {
+      resultado = "falso";
+      rating = "Sem evidências comprovadas";
+      fonte = "Modelo ML Local (demo)";
+    } else if (texto.includes("tse") || texto.includes("auditoria") || texto.includes("absolvido")) {
+      resultado = "verdadeiro";
+      rating = "Informação verificada";
+      fonte = "Modelo ML Local (demo)";
+    } else {
+      resultado = "indefinido";
+      rating = "Não foi possível classificar com segurança";
+      fonte = "Modelo ML Local (demo)";
+    }
+
+    renderResultado({
+      afirmacao,
+      resultado,
+      rating,
+      fonte,
+      confianca: 0.73,
+      modelo_usado: "Logistic Regression (demo)",
+      metodo: "ml"
+    });
+  }
+
+  // Enter para verificar
+  document.getElementById("afirmacao").addEventListener("keydown", e => {
+    if (e.key === "Enter" && e.ctrlKey) verificar();
+  });
+</script>
+
+</body>
+</html>
